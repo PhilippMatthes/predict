@@ -1,6 +1,5 @@
 import pandas_datareader.data as web
 import datetime as dt
-from Google
 
 FRED_heap = web.DataReader([
     "DCOILWTICO",

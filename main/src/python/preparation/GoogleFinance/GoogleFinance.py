@@ -12,14 +12,14 @@ class GoogleFinance:
     @staticmethod
     def get_finance_intraday(ticker, period=60, days=1):
         """
-        Retrieve intraday stock data from Google Finance.
+        Retrieve intraday main data from Google Finance.
 
         Parameters
         ----------
         ticker : str
             Company ticker symbol.
         period : int
-            Interval between stock values in seconds.
+            Interval between main values in seconds.
         days : int
             Number of days of data to retrieve.
 
