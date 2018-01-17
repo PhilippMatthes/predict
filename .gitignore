@@ -9,6 +9,7 @@ __pycache__/
 .idea/
 
 *.cfg
+t-SNE.png
 
 *.DS_STORE
 
