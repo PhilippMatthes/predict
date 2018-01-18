@@ -22,7 +22,7 @@ class PCA:
 
     def reduce(self, X):
         print("Reducing dimensionality of X")
-        return self.pca.fit_transform(X)
+        return self.pca.transform(X)
 
     def reproduce(self, X_reduced):
         print("Reproducing X")

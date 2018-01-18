@@ -1,16 +1,14 @@
 from sklearn.manifold import TSNE as SKTSNE
 import numpy as np
 from random import randint
-import matplotlib.cm as cm
+
 
 from sklearn.datasets import fetch_mldata
 
 
 class TSNE:
     def __init__(self, X):
-        self.tsne = SKTSNE(n_components=3)
-        print("Fitting t-SNE.")
-        self.tsne.fit(X)
+        self.tsne = SKTSNE(n_components=2, verbose=True)
 
     def reduce(self, X):
         print("Reducing dimensionality of X")
@@ -20,8 +18,8 @@ class TSNE:
 if __name__ == "__main__":
     print("Fetching MNIST Data")
     mnist = fetch_mldata('MNIST original')
-    X = mnist["data"]
-    y = mnist["target"]
+    X = mnist["data"][::10]
+    y = mnist["target"][::10]
     X_array = np.nan_to_num(np.asarray(X, dtype=np.double))
 
     visualizer = TSNE(X_array)
@@ -29,17 +27,22 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
+    import matplotlib.patches as mpatches
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111)
+    colors = {0: "black", 1: "red", 2: "orange", 3: "gold",
+              4: "chartreuse", 5: "darkgreen", 6: "lightseagreen",
+              7: "royalblue", 8: "darkorchid", 9: "pink"}
+    handles = []
+    for key in colors.keys():
+        patch = mpatches.Patch(color=colors[key], label=str(key))
+        handles.append(patch)
+    plt.legend(handles=handles)
 
-    colors = cm.rainbow(np.linspace(0, 1, len(X_visualized)))
-    for t, c in zip(X_visualized, colors):
-        plt.scatter(t[0], t[1], t[2], color=c, marker="o")
+    for t, l in zip(X_visualized, y):
+        ax.scatter(t[0], t[1], marker="o", label=l, color=colors[l])
 
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
 
     plt.savefig("t-SNE.png")
     plt.show()
