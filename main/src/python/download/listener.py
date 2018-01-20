@@ -12,7 +12,7 @@ from time import sleep
 
 from main.src.python.download.interval import Interval
 
-run_timeout = 5
+cycle_duration = 360
 
 
 class Listener:
@@ -51,13 +51,14 @@ class Listener:
                 break
             if start.is_after(end):
                 break
-            s, e = Oanda.range(start=start, end=end, interval=Interval(seconds=granularity_tuple["sec"]))
+            s, e = Oanda.range(start=s, end=e, interval=Interval(seconds=granularity_tuple["sec"]))
             response = Oanda.get_history_frame(instrument=instrument,
                                                start=s,
                                                end=e,
                                                granularity=granularity_tuple["api"])
             self.frame_queues[instrument].save(frame=response)
-            sleep(run_timeout)
+            start = e
+            sleep(cycle_duration)
 
     def stop(self):
         print("Stopping listener")
@@ -72,7 +73,10 @@ if __name__ == "__main__":
     listener = Listener()
     for instrument in instruments:
         listener.start_building_history(instrument=instrument,
-                                        start=OandaDate(date=datetime.utcnow()).minus(weeks=100),
+                                        start=OandaDate(date=datetime.utcnow()).minus(days=5),
                                         end=OandaDate(date=datetime.utcnow()),
-                                        granularity_tuple=OandaGranularity.w)
-        sleep(run_timeout)
+                                        granularity_tuple=OandaGranularity.s5)
+        sleep(cycle_duration / len(instruments))
+
+    while True:
+        sleep(1000000)

@@ -30,6 +30,7 @@ class Oanda:
                                      price="M")
             data_frame = pd.DataFrame(data['candles']).set_index('time')
             data_frame.index = pd.DatetimeIndex(data_frame.index)
+            print("Data received:", data_frame)
             return data_frame
 
         except JSONDecodeError:
