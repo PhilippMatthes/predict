@@ -51,7 +51,7 @@ class Listener:
                 break
             if start.is_after(end):
                 break
-            s, e = Oanda.range(start=s, end=e, interval=Interval(seconds=granularity_tuple["sec"]))
+            s, e = Oanda.range(start=start, end=end, interval=Interval(seconds=granularity_tuple["sec"]))
             response = Oanda.get_history_frame(instrument=instrument,
                                                start=s,
                                                end=e,
