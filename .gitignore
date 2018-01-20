@@ -11,6 +11,8 @@ __pycache__/
 *.cfg
 t-SNE.png
 
+data/
+
 *.DS_STORE
 
 # Distribution / packaging
