@@ -3,11 +3,13 @@ from json import JSONDecodeError
 
 import oandapy as opy
 import pandas as pd
+import os
 
 from main.src.python.download.interval import Interval
 from main.src.python.oanda.oanda_granularity import OandaGranularity
 
 from main.src.python.oanda.oanda_date import OandaDate
+from main.src.python.config import config_path
 
 max_data = 5000
 data_padding = 500
@@ -20,7 +22,7 @@ class Oanda:
                           end=OandaDate(),
                           granularity=OandaGranularity.s5["api"]):
         config = configparser.ConfigParser()
-        config.read('oanda.cfg')
+        config.read(os.path.join(config_path, "oanda.cfg"))
         oanda = opy.API(environment='practice',
                         access_token=config['oanda']['access_token'])
         try:

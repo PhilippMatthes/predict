@@ -12,6 +12,10 @@ __pycache__/
 t-SNE.png
 
 data/
+sessions/
+models/
+configuration/
+!instruments.txt
 
 *.DS_STORE
 

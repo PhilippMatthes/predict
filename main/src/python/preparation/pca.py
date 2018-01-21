@@ -7,22 +7,29 @@ from sklearn.datasets import fetch_mldata
 
 
 class PCA:
-    def __init__(self, X, variance=0.95):
+    def __init__(self, X, n_components):
+        self.pca = SKIncrementalPCA(n_components=n_components)
+        print("Fitting incremental PCA with n_components of {}".format(n_components))
+        self.pca.fit(X)
+
+
+    @staticmethod
+    def dimension_needed(X, variance=0.95):
         normal_pca = SKPCA(n_components=variance, random_state=42)
-        print("Fitting PCA.")
+        print("Fitting PCA to perform dimension check")
         normal_pca.fit(X)
         n_components = len(normal_pca.components_)
-        print("To hold a variance of {}, the PCA will use a dimension of {}.".format(variance, n_components))
-        self.pca = SKIncrementalPCA(n_components=n_components)
-        self.pca.components_ = normal_pca.components_
+        print("To hold a variance of {}, the PCA must use a dimension of {}".format(variance, n_components))
+        return n_components
 
     def refit(self, X):
-        print("Refitting PCA.")
+        print("Refitting incremental PCA.")
         self.pca.partial_fit(X)
 
     def reduce(self, X):
-        print("Reducing dimensionality of X")
-        return self.pca.transform(X)
+        X_r = self.pca.transform(X)
+        print("Reducing X of Shape {} to Shape {}".format(X.shape, X_r.shape))
+        return X_r
 
     def reproduce(self, X_reduced):
         print("Reproducing X")
@@ -36,7 +43,7 @@ if __name__ == "__main__":
     y = mnist["target"]
     X_array = np.nan_to_num(np.asarray(X, dtype=np.double))
 
-    pca = PCA(X_array)
+    pca = PCA(X_array, 50)
     X_reduced = pca.reduce(X_array)
     X_reproduced = pca.reproduce(X_reduced)
 

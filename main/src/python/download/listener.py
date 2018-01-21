@@ -11,6 +11,7 @@ import threading
 from time import sleep
 
 from main.src.python.download.interval import Interval
+from main.src.python.download.reader import Reader
 
 cycle_duration = 360
 
@@ -61,7 +62,7 @@ class Listener:
                                                granularity=granularity_tuple["api"])
             self.frame_queues[instrument].save(frame=response)
             if rev:
-                start = s
+                end = s
             else:
                 start = e
             sleep(cycle_duration)
@@ -72,11 +73,9 @@ class Listener:
 
 
 if __name__ == "__main__":
-    with open("instruments.txt") as f:
-        content = f.readlines()
-    instruments = [x.strip() for x in content]
+    instruments = Reader.all_instruments()
 
-    start = OandaDate(date=datetime.utcnow())
+    start = OandaDate().with_date(date_string="2018-01-15 18:11:50")
     end = OandaDate(date=datetime.utcnow()).minus(days=365)
 
     listener = Listener()

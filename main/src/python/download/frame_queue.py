@@ -3,6 +3,8 @@ import pathlib
 import pandas as pd
 from datetime import datetime
 
+from main.src.python.config import data_path
+
 
 class FrameQueue:
     def __init__(self, instrument):
@@ -15,7 +17,7 @@ class FrameQueue:
     def enqueue(self, frame):
         self.frames.append(frame)
 
-    def save_all(self, path="./data"):
+    def save_all(self, path=data_path):
         full_path = "{}/{}".format(path, self.instrument)
         for frame in self.frames:
             file = pathlib.Path("{}/{}_to_{}.pickle".format(full_path,
@@ -24,7 +26,7 @@ class FrameQueue:
             if not file.is_file():
                 self.save(frame)
 
-    def save(self, frame=pd.DataFrame(), path="./data"):
+    def save(self, frame=pd.DataFrame(), path=data_path):
         if frame is None:
             return
         full_path = "{}/{}".format(path, self.instrument)
