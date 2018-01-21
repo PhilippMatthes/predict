@@ -46,18 +46,20 @@ class Listener:
             sleep(interval.in_seconds())
 
     def build_history(self, instrument, start, end, granularity_tuple):
+        rev = start.is_after(end)
         while True:
             if self.stop_flag:
                 break
-            if start.is_after(end):
-                break
-            s, e = Oanda.range(start=start, end=end, interval=Interval(seconds=granularity_tuple["sec"]))
+            s, e = Oanda.range(start=start, end=end, interval=Interval(seconds=granularity_tuple["sec"]), rev=rev)
             response = Oanda.get_history_frame(instrument=instrument,
                                                start=s,
                                                end=e,
                                                granularity=granularity_tuple["api"])
             self.frame_queues[instrument].save(frame=response)
-            start = e
+            if rev:
+                end = s
+            else:
+                start = e
             sleep(cycle_duration)
 
     def stop(self):
@@ -74,7 +76,7 @@ if __name__ == "__main__":
     for instrument in instruments:
         listener.start_building_history(instrument=instrument,
                                         start=OandaDate(date=datetime.utcnow()).minus(days=5),
-                                        end=OandaDate(date=datetime.utcnow()),
+                                        end=OandaDate(date=datetime.utcnow()).minus(days=365),
                                         granularity_tuple=OandaGranularity.s5)
         sleep(cycle_duration / len(instruments))
 

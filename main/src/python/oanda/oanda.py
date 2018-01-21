@@ -37,12 +37,14 @@ class Oanda:
             print("No Data received")
 
     @staticmethod
-    def range(start=OandaDate(), end=OandaDate(), interval=Interval(seconds=OandaGranularity.s5["sec"])):
+    def range(start=OandaDate(), end=OandaDate(), interval=Interval(seconds=OandaGranularity.s5["sec"]), rev=False):
         possible_request_data = max_data - data_padding
-        possible_end = start.plus(seconds=(possible_request_data*interval.in_seconds()))
-        if possible_end.is_after(end):
-            return start, end
+        max_seconds = possible_request_data * interval.in_seconds()
+        if rev:
+            possible_start = end.minus(seconds=max_seconds)
+            return possible_start, end
         else:
+            possible_end = start.plus(seconds=max_seconds)
             return start, possible_end
 
 

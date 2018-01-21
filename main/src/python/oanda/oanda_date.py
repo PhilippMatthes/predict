@@ -20,4 +20,7 @@ class OandaDate:
     def is_after(self, oanda_date):
         return oanda_date.date < self.date
 
+    def is_before(self, oanda_date):
+        return oanda_date.date > self.date
+
 
