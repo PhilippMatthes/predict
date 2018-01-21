@@ -47,6 +47,10 @@ class Listener:
 
     def build_history(self, instrument, start, end, granularity_tuple):
         rev = start.is_after(end)
+        if rev:
+            i = start
+            start = end
+            end = i
         while True:
             if self.stop_flag:
                 break
@@ -57,7 +61,7 @@ class Listener:
                                                granularity=granularity_tuple["api"])
             self.frame_queues[instrument].save(frame=response)
             if rev:
-                end = s
+                start = s
             else:
                 start = e
             sleep(cycle_duration)
@@ -72,11 +76,12 @@ if __name__ == "__main__":
         content = f.readlines()
     instruments = [x.strip() for x in content]
 
+    start = OandaDate(date=datetime.utcnow())
+    end = OandaDate(date=datetime.utcnow()).minus(days=365)
+
     listener = Listener()
     for instrument in instruments:
-        listener.start_building_history(instrument=instrument,
-                                        start=OandaDate(date=datetime.utcnow()).minus(days=5),
-                                        end=OandaDate(date=datetime.utcnow()).minus(days=365),
+        listener.start_building_history(instrument=instrument, start=start, end=end,
                                         granularity_tuple=OandaGranularity.s5)
         sleep(cycle_duration / len(instruments))
 

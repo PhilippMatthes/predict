@@ -12,6 +12,7 @@ from main.src.python.oanda.oanda_date import OandaDate
 max_data = 5000
 data_padding = 500
 
+
 class Oanda:
     @staticmethod
     def get_history_frame(instrument='EUR_USD',
@@ -30,11 +31,13 @@ class Oanda:
                                      price="M")
             data_frame = pd.DataFrame(data['candles']).set_index('time')
             data_frame.index = pd.DatetimeIndex(data_frame.index)
-            print("Data received:", data_frame)
+            print(data_frame, "Data received for instrument {} between {} and {}:"
+                  .format(instrument, start.description(), end.description()))
             return data_frame
 
         except JSONDecodeError:
-            print("No Data received")
+            print("No Data received for instrument {} between {} and {}"
+                  .format(instrument, start.description(), end.description()))
 
     @staticmethod
     def range(start=OandaDate(), end=OandaDate(), interval=Interval(seconds=OandaGranularity.s5["sec"]), rev=False):

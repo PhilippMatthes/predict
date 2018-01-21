@@ -23,4 +23,10 @@ class OandaDate:
     def is_before(self, oanda_date):
         return oanda_date.date > self.date
 
+    def description(self):
+        weekday = self.date.strftime("%A")
+        day = self.date.strftime("%Y-%m-%d")
+        time = self.date.strftime("%H:%M:%S")
+        return "{} {} {}".format(weekday, day, time)
+
 
