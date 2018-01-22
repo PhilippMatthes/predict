@@ -15,15 +15,17 @@ from main.src.python.run_tensorboard import run_tensorboard
 
 class DNN:
     def __init__(self, n_inputs, n_outputs, learning_rate=0.01, keep_variance=0.99, momentum=0.9, name_scope="dnn"):
-        self.last_step = 0
+        self.sess = tf.Session()
+
+        self.step = 0
 
         self.learning_rate = learning_rate
         self.keep_variance = keep_variance
 
         self.n_inputs = n_inputs
-        n_hidden1 = 512
-        n_hidden2 = 256
-        n_hidden3 = 128
+        n_hidden1 = 512*4
+        n_hidden2 = 256*4
+        n_hidden3 = 128*4
         self.n_outputs = n_outputs
 
         self.training = tf.placeholder_with_default(False, shape=(), name="training")
@@ -46,10 +48,9 @@ class DNN:
             self.predictions_before_bn = tf.layers.dense(self.bn3_act, n_outputs, name="outputs")
             self.predictions = batch_norm_layer(self.predictions_before_bn)
 
-        # Inititalize loss function
+        # Initialize loss function
         with tf.name_scope(name_scope + "_loss"):
-            self.error = self.predictions - self.y
-            self.mse = tf.reduce_mean(tf.square(self.error), name="mse")
+            self.mse = tf.losses.mean_squared_error(labels=self.y, predictions=self.predictions)
 
         # Initialize train function
         with tf.name_scope(name_scope + "_train"):
@@ -68,30 +69,33 @@ class DNN:
         logdir = os.path.join(sessions_path, "run-{}/".format(now))
         self.file_writer = tf.summary.FileWriter(logdir, tf.get_default_graph())
 
+        self.init.run(session=self.sess)
+
     def train(self, X, y, batch_size, n_epochs=100):
+        print("Training network with batch size of {} and {} epochs".format(batch_size, n_epochs))
         batch_manager = BatchManager(X, y, batch_size)
         num_batches = batch_manager.num_batches()
 
-        with tf.Session() as sess:
-            self.init.run()
-            for epoch in range(n_epochs):
-                while batch_manager.has_next():
-                    X_train, X_test, y_train, y_test = batch_manager.next()
-                    if batch_manager.i % int(num_batches / 50) == 0:
-                        summary_str_train = self.mse_train_summary.eval(
-                            feed_dict={self.training: False, self.X: X_train, self.y: y_train}
-                        )
-                        summary_str_test = self.mse_test_summary.eval(
-                            feed_dict={self.training: False, self.X: X_test, self.y: y_test}
-                        )
-                        step = epoch * num_batches - batch_manager.i + self.last_step
-                        self.file_writer.add_summary(summary_str_train, step)
-                        self.file_writer.add_summary(summary_str_test, step)
-                    sess.run([self.training_op, self.extra_update_ops],
-                             feed_dict={self.training: True, self.X: X_train, self.y: y_train})
-                self.last_step = epoch * num_batches - batch_manager.i
-                batch_manager.reset()
-            self.saver.save(sess, os.path.join(models_path, "dnn.ckpt"))
+        for epoch in range(n_epochs):
+            while batch_manager.has_next():
+                X_train, X_test, y_train, y_test = batch_manager.next()
+                if batch_manager.i % int(num_batches / 50) == 0:
+                    summary_str_train = self.mse_train_summary.eval(
+                        feed_dict={self.training: False, self.X: X_train, self.y: y_train},
+                        session=self.sess,
+                    )
+                    summary_str_test = self.mse_test_summary.eval(
+                        feed_dict={self.training: False, self.X: X_test, self.y: y_test},
+                        session=self.sess
+                    )
+                    self.file_writer.add_summary(summary_str_train, self.step)
+                    self.file_writer.add_summary(summary_str_test, self.step)
+                self.step += 1
+                self.sess.run([self.training_op, self.extra_update_ops],
+                              feed_dict={self.training: True, self.X: X_train, self.y: y_train})
+            batch_manager.reset()
+        self.saver.save(self.sess, os.path.join(models_path, "model.ckpt"), self.step)
 
     def tear_down(self):
         self.file_writer.close()
+        self.sess.close()

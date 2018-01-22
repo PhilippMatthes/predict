@@ -13,7 +13,7 @@ from time import sleep
 from main.src.python.download.interval import Interval
 from main.src.python.download.reader import Reader
 
-cycle_duration = 15
+cycle_duration = 360
 
 
 class Listener:
@@ -72,13 +72,9 @@ class Listener:
         self.stop_flag = True
 
 
-def poll_all():
+def poll_all(listener, start, end):
     instruments = Reader.all_instruments()
 
-    start = OandaDate(date=datetime.utcnow()).minus(hours=30)
-    end = OandaDate(date=datetime.utcnow()).minus(days=365)
-
-    listener = Listener()
     for instrument in instruments:
         listener.start_building_history(instrument=instrument, start=start, end=end)
         sleep(cycle_duration / len(instruments))
@@ -92,26 +88,10 @@ def poll_instrument(listener, instrument, start, end):
 if __name__ == "__main__":
     listener = Listener()
 
-    poll_instrument(listener, "XAU_XAG", OandaDate().with_date("2018-01-08 18:11:00"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
-    poll_instrument(listener, "XAU_HKD", OandaDate().with_date("2018-01-08 18:11:00"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
-    poll_instrument(listener, "XAU_GBP", OandaDate().with_date("2018-01-08 18:11:00"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
-    poll_instrument(listener, "XAU_EUR", OandaDate().with_date("2018-01-08 18:11:00"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
-    poll_instrument(listener, "USD_JPY", OandaDate().with_date("2018-01-17 02:11:00"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
-    poll_instrument(listener, "USD_DKK", OandaDate().with_date("2018-01-17 02:11:00"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
-    poll_instrument(listener, "USD_CZK", OandaDate().with_date("2018-01-17 02:11:00"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
-    poll_instrument(listener, "GBP_SGD", OandaDate().with_date("2018-01-17 02:11:00"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
-    poll_instrument(listener, "GBP_NZD", OandaDate().with_date("2018-01-17 02:11:00"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
-    poll_instrument(listener, "AU200_AUD", OandaDate().with_date("2017-12-26 22:50:10"),
-                    OandaDate().with_date("2017-12-22 07:26:45"))
+    start = OandaDate().with_date("2017-12-20 18:00:00")
+    end = OandaDate().with_date("2016-12-22 00:05:20")
+
+    poll_all(listener, start, end)
 
     while True:
         sleep(1000000)

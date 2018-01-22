@@ -16,6 +16,7 @@ sessions/
 models/
 configuration/
 !instruments.txt
+logdir/
 
 *.DS_STORE
 

@@ -1,9 +1,9 @@
-from main.src.python.config import sessions_path
+from main.src.python.config import logdir_path
 import os
 
 
 def run_tensorboard():
-    os.system("tensorboard --logdir {}".format(sessions_path))
+    os.system("tensorboard --logdir {}".format(logdir_path))
 
 
 if __name__ == "__main__":

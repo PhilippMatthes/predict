@@ -1,4 +1,7 @@
+import threading
 from datetime import datetime
+import matplotlib.pyplot as plt
+
 
 from main.src.python.download.interval import Interval
 from main.src.python.download.reader import Reader
@@ -27,8 +30,8 @@ X_np = data[:-data_offset, 1:]
 n_inputs = PCA.dimension_needed(X_np, variance=keep_variance)
 pca = PCA(X=X_np, n_components=n_inputs)
 
-dnn = DNN(n_inputs=n_inputs, n_outputs=data_offset, learning_rate=0.01, keep_variance=0.99, momentum=0.9,
-          name_scope="dnn")
+dnn = DNN(n_inputs=n_inputs, n_outputs=data_offset, learning_rate=learning_rate,
+          keep_variance=keep_variance, momentum=momentum, name_scope="dnn")
 
 while date_range_iterator.has_next():
     try:
@@ -44,7 +47,12 @@ while date_range_iterator.has_next():
         pca.refit(X_np)
         X_np_reduced = pca.reduce(X_np)
 
-        dnn.train(X_np_reduced, y_np, batch_size=100, n_epochs=10)
+
+        thread = threading.Thread(target=dnn.train, args=[X_np_reduced, y_np, 100, 10])
+        thread.daemon = True
+        thread.start()
+
+        thread.join()
 
     except KeyboardInterrupt:
         dnn.tear_down()
