@@ -13,7 +13,7 @@ from time import sleep
 from main.src.python.download.interval import Interval
 from main.src.python.download.reader import Reader
 
-cycle_duration = 360
+cycle_duration = 15
 
 
 class Listener:
@@ -28,7 +28,7 @@ class Listener:
         thread.daemon = True
         thread.start()
 
-    def start_building_history(self, instrument, start, end, granularity_tuple):
+    def start_building_history(self, instrument, start, end, granularity_tuple=OandaGranularity.s5):
         self.frame_queues[instrument] = FrameQueue(instrument=instrument)
         thread = threading.Thread(target=self.build_history, args=[instrument, start, end, granularity_tuple])
         thread.daemon = True
@@ -72,17 +72,46 @@ class Listener:
         self.stop_flag = True
 
 
-if __name__ == "__main__":
+def poll_all():
     instruments = Reader.all_instruments()
 
-    start = OandaDate().with_date(date_string="2018-01-15 18:11:50")
+    start = OandaDate(date=datetime.utcnow()).minus(hours=30)
     end = OandaDate(date=datetime.utcnow()).minus(days=365)
 
     listener = Listener()
     for instrument in instruments:
-        listener.start_building_history(instrument=instrument, start=start, end=end,
-                                        granularity_tuple=OandaGranularity.s5)
+        listener.start_building_history(instrument=instrument, start=start, end=end)
         sleep(cycle_duration / len(instruments))
+
+
+def poll_instrument(listener, instrument, start, end):
+    listener.start_building_history(instrument=instrument, start=start, end=end)
+    sleep(1)
+
+
+if __name__ == "__main__":
+    listener = Listener()
+
+    poll_instrument(listener, "XAU_XAG", OandaDate().with_date("2018-01-08 18:11:00"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
+    poll_instrument(listener, "XAU_HKD", OandaDate().with_date("2018-01-08 18:11:00"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
+    poll_instrument(listener, "XAU_GBP", OandaDate().with_date("2018-01-08 18:11:00"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
+    poll_instrument(listener, "XAU_EUR", OandaDate().with_date("2018-01-08 18:11:00"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
+    poll_instrument(listener, "USD_JPY", OandaDate().with_date("2018-01-17 02:11:00"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
+    poll_instrument(listener, "USD_DKK", OandaDate().with_date("2018-01-17 02:11:00"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
+    poll_instrument(listener, "USD_CZK", OandaDate().with_date("2018-01-17 02:11:00"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
+    poll_instrument(listener, "GBP_SGD", OandaDate().with_date("2018-01-17 02:11:00"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
+    poll_instrument(listener, "GBP_NZD", OandaDate().with_date("2018-01-17 02:11:00"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
+    poll_instrument(listener, "AU200_AUD", OandaDate().with_date("2017-12-26 22:50:10"),
+                    OandaDate().with_date("2017-12-22 07:26:45"))
 
     while True:
         sleep(1000000)

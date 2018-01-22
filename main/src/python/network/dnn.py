@@ -5,106 +5,93 @@ from functools import partial
 from datetime import datetime
 
 from main.src.python.download.reader import Reader
+from main.src.python.oanda.oanda_date import OandaDate
 from main.src.python.preparation.batch_manager import BatchManager
 from main.src.python.preparation.pca import PCA
 from main.src.python.config import models_path
 from main.src.python.config import sessions_path
 from main.src.python.run_tensorboard import run_tensorboard
 
-now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-logdir = os.path.join(sessions_path, "run-{}/".format(now))
 
-data_offset = int(600 / 5)
-batch_size = 100
-n_epochs = 1000
-learning_rate = 0.01
+class DNN:
+    def __init__(self, n_inputs, n_outputs, learning_rate=0.01, keep_variance=0.99, momentum=0.9, name_scope="dnn"):
+        self.last_step = 0
 
-# Read data
-reader = Reader(read=True, scale=True)
-data = reader.data
+        self.learning_rate = learning_rate
+        self.keep_variance = keep_variance
 
-# Truncate data
-X_np = data[:-data_offset, 1:]
-y_np = data[data_offset:, :1]
+        self.n_inputs = n_inputs
+        n_hidden1 = 512
+        n_hidden2 = 256
+        n_hidden3 = 128
+        self.n_outputs = n_outputs
 
-# Check how many dimensions we need to fit the given variance
-n_inputs = PCA.dimension_needed(X_np, variance=0.97)
+        self.training = tf.placeholder_with_default(False, shape=(), name="training")
+        self.X = tf.placeholder(tf.float32, shape=(None, n_inputs), name="X")
+        self.y = tf.placeholder(tf.float32, shape=(None), name="y")
 
-# Perform dimension reduction
-pca = PCA(X=X_np, n_components=n_inputs)
-X_np_reduced = pca.reduce(X=X_np)
+        batch_norm_layer = partial(tf.layers.batch_normalization, training=self.training, momentum=momentum)
 
-# Load batch manager
-batch_manager = BatchManager(X=X_np_reduced, y=y_np, batch_size=batch_size)
+        # Initialize layers
+        with tf.name_scope(name_scope):
+            self.hidden1 = tf.layers.dense(self.X, n_hidden1, name="hidden1")
+            self.bn1 = batch_norm_layer(self.hidden1)
+            self.bn1_act = tf.nn.elu(self.bn1)
+            self.hidden2 = tf.layers.dense(self.bn1_act, n_hidden2, name="hidden2")
+            self.bn2 = batch_norm_layer(self.hidden2)
+            self.bn2_act = tf.nn.elu(self.bn2)
+            self.hidden3 = tf.layers.dense(self.bn2_act, n_hidden3, name="hidden3")
+            self.bn3 = batch_norm_layer(self.hidden3)
+            self.bn3_act = tf.nn.elu(self.bn3)
+            self.predictions_before_bn = tf.layers.dense(self.bn3_act, n_outputs, name="outputs")
+            self.predictions = batch_norm_layer(self.predictions_before_bn)
 
-n_hidden1 = data_offset * 4
-n_hidden2 = data_offset * 3
-n_hidden3 = data_offset * 2
-n_outputs = data_offset
+        # Inititalize loss function
+        with tf.name_scope(name_scope + "_loss"):
+            self.error = self.predictions - self.y
+            self.mse = tf.reduce_mean(tf.square(self.error), name="mse")
 
-X = tf.placeholder(tf.float32, shape=(None, n_inputs), name="X")
-y = tf.placeholder(tf.float32, shape=(None), name="y")
+        # Initialize train function
+        with tf.name_scope(name_scope + "_train"):
+            self.optimizer = tf.train.AdamOptimizer(learning_rate)
+            self.training_op = self.optimizer.minimize(self.mse)
 
-# Training placeholder to turn off batch norm out of training
-training = tf.placeholder_with_default(False, shape=(), name="training")
+        self.extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 
-batch_norm_layer = partial(tf.layers.batch_normalization, training=training, momentum=0.9)
+        self.init = tf.global_variables_initializer()
+        self.saver = tf.train.Saver()
 
-with tf.name_scope("dnn"):
-    hidden1 = tf.layers.dense(X, n_hidden1, name="hidden1")
-    bn1 = batch_norm_layer(hidden1)
-    bn1_act = tf.nn.elu(bn1)
-    hidden2 = tf.layers.dense(bn1_act, n_hidden2, name="hidden2")
-    bn2 = batch_norm_layer(hidden2)
-    bn2_act = tf.nn.elu(bn2)
-    hidden3 = tf.layers.dense(bn2_act, n_hidden3, name="hidden3")
-    bn3 = batch_norm_layer(hidden3)
-    bn3_act = tf.nn.elu(bn3)
-    predictions_before_bn = tf.layers.dense(bn3_act, n_outputs, name="outputs")
-    predictions = batch_norm_layer(predictions_before_bn)
+        self.mse_train_summary = tf.summary.scalar(name_scope + "_MSE-Train", self.mse)
+        self.mse_test_summary = tf.summary.scalar(name_scope + "_MSE-Test", self.mse)
 
-with tf.name_scope("loss"):
-    error = predictions - y
-    mse = tf.reduce_mean(tf.square(error), name="mse")
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        logdir = os.path.join(sessions_path, "run-{}/".format(now))
+        self.file_writer = tf.summary.FileWriter(logdir, tf.get_default_graph())
 
+    def train(self, X, y, batch_size, n_epochs=100):
+        batch_manager = BatchManager(X, y, batch_size)
+        num_batches = batch_manager.num_batches()
 
-with tf.name_scope("train"):
-    optimizer = tf.train.AdamOptimizer(learning_rate)
-    training_op = optimizer.minimize(mse)
+        with tf.Session() as sess:
+            self.init.run()
+            for epoch in range(n_epochs):
+                while batch_manager.has_next():
+                    X_train, X_test, y_train, y_test = batch_manager.next()
+                    if batch_manager.i % int(num_batches / 50) == 0:
+                        summary_str_train = self.mse_train_summary.eval(
+                            feed_dict={self.training: False, self.X: X_train, self.y: y_train}
+                        )
+                        summary_str_test = self.mse_test_summary.eval(
+                            feed_dict={self.training: False, self.X: X_test, self.y: y_test}
+                        )
+                        step = epoch * num_batches - batch_manager.i + self.last_step
+                        self.file_writer.add_summary(summary_str_train, step)
+                        self.file_writer.add_summary(summary_str_test, step)
+                    sess.run([self.training_op, self.extra_update_ops],
+                             feed_dict={self.training: True, self.X: X_train, self.y: y_train})
+                self.last_step = epoch * num_batches - batch_manager.i
+                batch_manager.reset()
+            self.saver.save(sess, os.path.join(models_path, "dnn.ckpt"))
 
-init = tf.global_variables_initializer()
-saver = tf.train.Saver()
-
-extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-
-mse_train_summary = tf.summary.scalar("MSE-Train", mse)
-mse_test_summary = tf.summary.scalar("MSE-Test", mse)
-
-file_writer = tf.summary.FileWriter(logdir, tf.get_default_graph())
-
-try:
-    with tf.Session() as sess:
-        init.run()
-        for epoch in range(n_epochs):
-            num_batches = batch_manager.num_batches()
-            while batch_manager.has_next():
-                X_train, X_test, y_train, y_test = batch_manager.next()
-                if batch_manager.i % int(num_batches / 50) == 0:
-                    summary_str_train = mse_train_summary.eval(feed_dict={training: False, X: X_train, y: y_train})
-                    summary_str_test = mse_test_summary.eval(feed_dict={training: False, X: X_test, y: y_test})
-                    mse_train = mse.eval(feed_dict={training: False, X: X_train, y: y_train})
-                    mse_test = mse.eval(feed_dict={training: False, X: X_test, y: y_test})
-                    step = epoch * num_batches - batch_manager.i
-                    print("Epoch: {}/{} Step {} Train Loss: {}, Test Loss: {} (Discrepancy: {})"
-                          .format(epoch, n_epochs, step,  mse_train, mse_test, mse_train-mse_test))
-                    file_writer.add_summary(summary_str_train, step)
-                    file_writer.add_summary(summary_str_test, step)
-                sess.run([training_op, extra_update_ops], feed_dict={training: True, X: X_train, y: y_train})
-            batch_manager.reset()
-        save_path = saver.save(sess, os.path.join(models_path, "dnn.ckpt"))
-
-except KeyboardInterrupt:
-    pass
-
-file_writer.close()
-run_tensorboard()
+    def tear_down(self):
+        self.file_writer.close()

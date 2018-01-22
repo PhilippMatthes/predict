@@ -12,7 +12,6 @@ class PCA:
         print("Fitting incremental PCA with n_components of {}".format(n_components))
         self.pca.fit(X)
 
-
     @staticmethod
     def dimension_needed(X, variance=0.95):
         normal_pca = SKPCA(n_components=variance, random_state=42)
@@ -23,7 +22,7 @@ class PCA:
         return n_components
 
     def refit(self, X):
-        print("Refitting incremental PCA.")
+        print("Refitting incremental PCA")
         self.pca.partial_fit(X)
 
     def reduce(self, X):
