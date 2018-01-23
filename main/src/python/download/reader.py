@@ -9,20 +9,18 @@ from main.src.python.download.index_file import IndexFile
 
 
 class Reader:
-    def __init__(self, start, end, read=True, scale=True):
+    def __init__(self, start, end, read=True, reduce=False):
         self.df_dict = {}
         self.stacked_df_dict = {}
         self.adjusted_df_dict = {}
-        self.reduced_df_dict = {}
         self.data = None
         if read:
             self.read(start, end)
             self.stack()
             self.adjust()
-            self.reduce()
+            if reduce:
+                self.reduce()
             self.concat()
-            if scale:
-                self.scale()
 
     @staticmethod
     def all_instruments():
@@ -61,17 +59,13 @@ class Reader:
     def reduce(self):
         print("Reducing adjusted data frames")
         for instrument, adjusted_df in self.adjusted_df_dict.items():
-            self.reduced_df_dict[instrument] = adjusted_df[adjusted_df.columns[1]]
+            self.adjusted_df_dict[instrument] = adjusted_df[adjusted_df.columns[1]]
 
     def concat(self):
         print("Concatenating reduced data frames")
-        df = pd.concat([self.reduced_df_dict[key] for key in sorted(self.reduced_df_dict.keys())], axis=1)
+        df = pd.concat([self.adjusted_df_dict[key] for key in sorted(self.adjusted_df_dict.keys())], axis=1)
         print("Converting concatenated data frames to numpy array")
         self.data = df.values
-
-    def scale(self):
-        print("Scaling converted numpy array")
-        self.data = StandardScaler().fit_transform(self.data)
 
 
 if __name__ == "__main__":
