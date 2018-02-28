@@ -11,7 +11,7 @@ import threading
 from time import sleep
 
 from main.src.python.download.interval import Interval
-from main.src.python.download.reader import Reader
+from main.src.python.download.parallel_reader import Reader
 
 cycle_duration = 360
 

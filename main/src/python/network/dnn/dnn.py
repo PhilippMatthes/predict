@@ -4,7 +4,7 @@ import os
 from functools import partial
 from datetime import datetime
 
-from main.src.python.download.reader import Reader
+from main.src.python.download.parallel_reader import ParallelReader
 from main.src.python.oanda.oanda_date import OandaDate
 from main.src.python.preparation.batch_manager import BatchManager
 from main.src.python.config import models_path
@@ -28,6 +28,9 @@ class DNN:
         n_hidden1 = 512*4
         n_hidden2 = 256*4
         n_hidden3 = 128*4
+        n_hidden4 = 64*4
+        n_hidden5 = 32*4
+        n_hidden6 = 16*4
         self.n_outputs = n_outputs
 
         self.training = tf.placeholder_with_default(False, shape=(), name=self.name_scope+"training")
@@ -47,7 +50,16 @@ class DNN:
             self.hidden3 = tf.layers.dense(self.bn2_act, n_hidden3, name=self.name_scope+"_hidden3")
             self.bn3 = batch_norm_layer(self.hidden3)
             self.bn3_act = tf.nn.elu(self.bn3)
-            self.predictions_before_bn = tf.layers.dense(self.bn3_act, n_outputs, name=self.name_scope+"_outputs")
+            self.hidden4 = tf.layers.dense(self.bn3_act, n_hidden4, name=self.name_scope + "_hidden4")
+            self.bn4 = batch_norm_layer(self.hidden4)
+            self.bn4_act = tf.nn.elu(self.bn4)
+            self.hidden5 = tf.layers.dense(self.bn4_act, n_hidden5, name=self.name_scope + "_hidden5")
+            self.bn5 = batch_norm_layer(self.hidden5)
+            self.bn5_act = tf.nn.elu(self.bn5)
+            self.hidden6 = tf.layers.dense(self.bn5_act, n_hidden6, name=self.name_scope + "_hidden6")
+            self.bn6 = batch_norm_layer(self.hidden6)
+            self.bn6_act = tf.nn.elu(self.bn6)
+            self.predictions_before_bn = tf.layers.dense(self.bn6_act, n_outputs, name=self.name_scope+"_outputs")
             self.predictions = batch_norm_layer(self.predictions_before_bn)
 
         # Initialize loss function
@@ -101,7 +113,7 @@ class DNN:
                 self.saver.save(self.sess, os.path.join(models_path, "model-{}.ckpt".format(self.name_scope)))
 
     def predict(self, X):
-        return self.predictions.eval(session=self.sess, feed_dict={self.training: False, self.X: X})
+        return self.predictions_before_bn.eval(session=self.sess, feed_dict={self.training: False, self.X: X})
 
     def tear_down(self):
         if self.store:

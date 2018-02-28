@@ -8,7 +8,7 @@ from main.src.python.config import config_path
 from main.src.python.download.index_file import IndexFile
 
 
-class Reader:
+class ParallelReader:
     def __init__(self, start, end, read=True, reduce=False):
         self.df_dict = {}
         self.stacked_df_dict = {}
@@ -30,7 +30,7 @@ class Reader:
 
     def read(self, start, end):
         print("Reading data frames")
-        instruments = Reader.all_instruments()
+        instruments = ParallelReader.all_instruments()
         for instrument in instruments:
             paths = glob.glob("{}/{}/*.pickle".format(data_path, instrument))
             for path in paths:
